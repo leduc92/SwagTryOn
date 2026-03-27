@@ -16,6 +16,45 @@
             padding: 1rem;
         }
 
+        .swag-try-on-related {
+            margin-top: 1.25rem;
+        }
+
+        .swag-try-on-related-card {
+            display: block;
+            width: 100%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            text-align: left;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .swag-try-on-related-frame {
+            overflow: hidden;
+            border-radius: 1.25rem;
+            background: rgba(6, 14, 24, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+        }
+
+        .swag-try-on-related-image {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            background: #0d1620;
+        }
+
+        .swag-try-on-related-name {
+            padding: 0.85rem 0.9rem 1rem;
+            font-size: 0.95rem;
+            line-height: 1.35;
+            color: #f8fbff;
+        }
+
         .swag-try-on-stage {
             position: relative;
             overflow: hidden;
@@ -123,8 +162,8 @@
                     <div class="swag-try-on-panel">
                         <div class="swag-try-on-topbar d-flex justify-content-between align-items-start gap-2">
                             <div class="swag-try-on-chip">
-                                <span>{{ tryOn.wearMode|capitalize }}</span>
-                                <span class="opacity-75">{{ product.translated.name }}</span>
+                                <span data-try-on-product-mode>{{ tryOn.wearMode|capitalize }}</span>
+                                <span class="opacity-75" data-try-on-product-name-chip>{{ product.translated.name }}</span>
                             </div>
 
                             <a class="btn btn-sm btn-light" href="{{ seoUrl('frontend.detail.page', { productId: product.id }) }}">
@@ -135,7 +174,7 @@
                         <div class="swag-try-on-controls">
                             <div class="swag-try-on-status-card mb-3">
                                 <p class="text-uppercase small mb-1 opacity-75">Virtual try-on</p>
-                                <h1 class="h4 mb-2">{{ product.translated.name }}</h1>
+                                <h1 class="h4 mb-2" data-try-on-product-name-heading>{{ product.translated.name }}</h1>
                                 <p class="swag-try-on-guidance mb-3">
                                     This page is the camera experience. On phone we try to start it automatically.
                                 </p>
@@ -174,6 +213,106 @@
                     <img src="{{ tryOn.overlayImageUrl }}" alt="" class="d-none" data-try-on-overlay-image>
                 </div>
             </div>
+
+            {% if relatedProducts and relatedProducts.elements %}
+                <section class="swag-try-on-related">
+                    {% set sliderConfig = {
+                        title: { value: 'More to try on' },
+                        displayMode: { value: 'standard' },
+                        boxLayout: { value: 'standard' },
+                        verticalAlign: { value: null },
+                        navigationArrows: { value: 'outside' },
+                        rotate: { value: false },
+                        autoplayTimeout: { value: 5000 },
+                        speed: { value: 300 },
+                        border: { value: false },
+                        elMinWidth: { value: '180px' }
+                    } %}
+                    {% set hasNavigationArrows = true %}
+                    {% set productSliderOptionsSlider = {
+                        controls: true,
+                        nav: false,
+                        mouseDrag: true,
+                        autoplay: false,
+                        autoplayButtonOutput: false,
+                        autoplayTimeout: 5000,
+                        speed: 300,
+                        ariaLive: true,
+                        gutter: 20,
+                        loop: false,
+                        rewind: true
+                    } %}
+                    {% set productSliderOptions = {
+                        productboxMinWidth: '180px',
+                        slider: productSliderOptionsSlider
+                    } %}
+
+                    <div class="base-slider product-slider has-nav has-nav-outside"
+                         data-product-slider="true"
+                         data-product-slider-options="{{ productSliderOptions|json_encode }}"
+                         role="region"
+                         aria-label="More products to try on"
+                         tabindex="0">
+                        <div class="cms-element-title">
+                            <p class="cms-element-title-paragraph">More to try on</p>
+                        </div>
+
+                        <div class="product-slider-container" data-product-slider-container="true">
+                            {% for relatedProduct in relatedProducts.elements %}
+                                <div class="product-slider-item">
+                                    {% set relatedOverlayUrl = relatedProduct.customFields.swag_try_on_overlay_url ?? (relatedProduct.cover and relatedProduct.cover.media ? relatedProduct.cover.media.url : '') %}
+                                    {% set relatedWearMode = relatedProduct.customFields.swag_try_on_wear_mode ?? tryOn.wearMode %}
+                                    {% set relatedScale = relatedProduct.customFields.swag_try_on_scale ?? 1 %}
+                                    {% set relatedOffsetX = relatedProduct.customFields.swag_try_on_offset_x ?? 0 %}
+                                    {% set relatedOffsetY = relatedProduct.customFields.swag_try_on_offset_y ?? 0 %}
+                                    <button class="swag-try-on-related-card"
+                                            type="button"
+                                            data-try-on-product-switch="true"
+                                            data-try-on-product-id="{{ relatedProduct.id }}"
+                                            data-try-on-product-name="{{ relatedProduct.translated.name }}"
+                                            data-try-on-product-mode="{{ relatedWearMode }}"
+                                            data-try-on-product-overlay="{{ relatedOverlayUrl }}"
+                                            data-try-on-product-scale="{{ relatedScale }}"
+                                            data-try-on-product-offset-x="{{ relatedOffsetX }}"
+                                            data-try-on-product-offset-y="{{ relatedOffsetY }}"
+                                            data-try-on-product-url="{{ path('storefront.swag.try.on.viewer', { productId: relatedProduct.id, autostart: 1 }) }}">
+                                        <div class="swag-try-on-related-frame">
+                                            {% if relatedProduct.cover and relatedProduct.cover.media %}
+                                                <img
+                                                    src="{{ relatedProduct.cover.media.url }}"
+                                                    alt="{{ relatedProduct.translated.name }}"
+                                                    class="swag-try-on-related-image"
+                                                    loading="lazy">
+                                            {% else %}
+                                                <div class="swag-try-on-related-image"></div>
+                                            {% endif %}
+
+                                            <div class="swag-try-on-related-name">
+                                                {{ relatedProduct.translated.name }}
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="product-slider-controls-container">
+                            <div class="base-slider-controls" data-product-slider-controls="true" role="navigation">
+                                <button
+                                    class="base-slider-controls-prev product-slider-controls-prev is-nav-prev-outside"
+                                    aria-label="{{ 'general.previous'|trans|striptags }}">
+                                    {% sw_icon 'arrow-head-left' %}
+                                </button>
+                                <button
+                                    class="base-slider-controls-next product-slider-controls-next is-nav-next-outside"
+                                    aria-label="{{ 'general.next'|trans|striptags }}">
+                                    {% sw_icon 'arrow-head-right' %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
         </div>
     </div>
 
@@ -197,6 +336,10 @@
         const startButton = app?.querySelector('[data-try-on-start]');
         const toggleManualButton = app?.querySelector('[data-try-on-toggle-manual]');
         const manualPanel = app?.querySelector('[data-try-on-manual-panel]');
+        const productNameHeading = app?.querySelector('[data-try-on-product-name-heading]');
+        const productNameChip = app?.querySelector('[data-try-on-product-name-chip]');
+        const productModeLabel = app?.querySelector('[data-try-on-product-mode]');
+        const productSwitchButtons = app?.querySelectorAll('[data-try-on-product-switch]');
         const scaleInput = app?.querySelector('[data-try-on-scale]');
         const offsetXInput = app?.querySelector('[data-try-on-offset-x]');
         const offsetYInput = app?.querySelector('[data-try-on-offset-y]');
@@ -246,6 +389,53 @@
                     ? 'Manual adjustment is open. Use the sliders to fine tune placement.'
                     : 'Manual adjustment hidden. Tracking remains active.'
             );
+        });
+
+        productSwitchButtons?.forEach((button) => {
+            button.addEventListener('click', () => {
+                const nextOverlayUrl = button.dataset.tryOnProductOverlay || '';
+                if (!nextOverlayUrl) {
+                    updateStatus('This product is missing a try-on overlay image.');
+
+                    return;
+                }
+
+                const nextName = button.dataset.tryOnProductName || '';
+                const nextMode = normalizeWearMode(button.dataset.tryOnProductMode || config.wearMode);
+                const nextScale = Number(button.dataset.tryOnProductScale || state.scale);
+                const nextOffsetX = Number(button.dataset.tryOnProductOffsetX || state.offsetX);
+                const nextOffsetY = Number(button.dataset.tryOnProductOffsetY || state.offsetY);
+                const nextUrl = button.dataset.tryOnProductUrl || '';
+
+                config.wearMode = nextMode;
+                state.scale = Number.isFinite(nextScale) ? nextScale : 1;
+                state.offsetX = Number.isFinite(nextOffsetX) ? nextOffsetX : 0;
+                state.offsetY = Number.isFinite(nextOffsetY) ? nextOffsetY : 0;
+                state.smoothing = null;
+                overlayImage.src = nextOverlayUrl;
+
+                if (productNameHeading) {
+                    productNameHeading.textContent = nextName;
+                }
+
+                if (productNameChip) {
+                    productNameChip.textContent = nextName;
+                }
+
+                if (productModeLabel) {
+                    productModeLabel.textContent = capitalize(nextMode);
+                }
+
+                scaleInput.value = String(state.scale);
+                offsetXInput.value = String(state.offsetX);
+                offsetYInput.value = String(state.offsetY);
+
+                if (nextUrl) {
+                    window.history.replaceState({}, '', nextUrl);
+                }
+
+                updateStatus(`Switched to ${nextName}. Keep your hand in frame.`);
+            });
         });
 
         startButton.addEventListener('click', async () => {
@@ -506,6 +696,14 @@
 
         function updateStatus(message) {
             status.textContent = message;
+        }
+
+        function normalizeWearMode(value) {
+            return value === 'ring' ? 'ring' : 'watch';
+        }
+
+        function capitalize(value) {
+            return value.charAt(0).toUpperCase() + value.slice(1);
         }
 
         function formatCameraError(error, userInitiated) {

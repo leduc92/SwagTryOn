@@ -4,7 +4,10 @@ namespace Shopware\SwagTryOn\Storefront\Controller;
 
 use Shopware\Core\Content\Product\ProductException;
 use Shopware\Core\Content\Product\SalesChannel\Detail\AbstractProductDetailRoute;
+use Shopware\Core\Content\Product\SalesChannel\Listing\AbstractProductListingRoute;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Routing\RoutingException;
 use Shopware\Core\PlatformRequest;
@@ -25,6 +28,7 @@ final class TryOnController extends StorefrontController
 {
     public function __construct(
         private readonly AbstractProductDetailRoute $productDetailRoute,
+        private readonly AbstractProductListingRoute $productListingRoute,
         private readonly TryOnProductConfigurator $tryOnProductConfigurator,
     ) {
     }
@@ -47,8 +51,26 @@ final class TryOnController extends StorefrontController
             throw ProductException::productNotFound($productId);
         }
 
+        $relatedProducts = null;
+        $seoCategory = $product->getSeoCategory();
+
+        if ($seoCategory !== null && $seoCategory->getId() !== null) {
+            $listingCriteria = (new Criteria())
+                ->setLimit(10)
+                ->addFilter(
+                    new NotFilter(NotFilter::CONNECTION_AND, [
+                        new EqualsFilter('id', $product->getId()),
+                    ])
+                );
+
+            $relatedProducts = $this->productListingRoute
+                ->load($seoCategory->getId(), $request, $salesChannelContext, $listingCriteria)
+                ->getResult();
+        }
+
         return $this->renderStorefront('@SwagTryOn/storefront/page/swag-try-on/viewer.html.twig', [
             'product' => $product,
+            'relatedProducts' => $relatedProducts,
             'tryOn' => $tryOnConfig,
         ]);
     }

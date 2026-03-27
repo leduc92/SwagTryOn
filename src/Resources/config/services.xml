@@ -9,6 +9,8 @@
 
         <service id="Shopware\Core\Content\Product\SalesChannel\Detail\AbstractProductDetailRoute"
                  alias="Shopware\Core\Content\Product\SalesChannel\Detail\ProductDetailRoute"/>
+        <service id="Shopware\Core\Content\Product\SalesChannel\Listing\AbstractProductListingRoute"
+                 alias="Shopware\Core\Content\Product\SalesChannel\Listing\ProductListingRoute"/>
 
         <service id="Shopware\SwagTryOn\Service\TryOnProductConfigurator"/>
 
