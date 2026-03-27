@@ -189,6 +189,9 @@
 
                             <div class="swag-try-on-drawer" data-try-on-manual-panel hidden>
                                 <h2 class="h6 mb-3">Manual adjustment</h2>
+                                <p class="small opacity-75 mb-3">
+                                    Best results come from a tightly cropped transparent PNG. For watches, upload center, left, and right angle assets.
+                                </p>
                                 <div class="mb-3">
                                     <label class="form-label" for="swagTryOnScale">Scale</label>
                                     <input id="swagTryOnScale" type="range" min="0.4" max="2.2" step="0.05" class="form-range" data-try-on-scale>
@@ -631,16 +634,23 @@
 
         function anchorForWatch(landmarks) {
             const wrist = landmarks[0];
+            const middleBase = landmarks[9];
             const indexBase = landmarks[5];
             const pinkyBase = landmarks[17];
-            const width = distance(indexBase, pinkyBase) * 1.7;
+            const palmWidth = distance(indexBase, pinkyBase);
+            const forearmLength = distance(wrist, middleBase);
+            const width = Math.max(palmWidth * 1.15, forearmLength * 0.9);
             const angle = Math.atan2(indexBase.y - pinkyBase.y, indexBase.x - pinkyBase.x);
+            const palmCenterX = (indexBase.x + pinkyBase.x) / 2;
+            const palmCenterY = (indexBase.y + pinkyBase.y) / 2;
+            const anchorX = lerp(wrist.x, palmCenterX, 0.28);
+            const anchorY = lerp(wrist.y, palmCenterY, 0.28);
 
             return {
-                x: wrist.x + state.offsetX,
-                y: wrist.y + 0.03 + state.offsetY,
+                x: anchorX + state.offsetX,
+                y: anchorY + state.offsetY,
                 width,
-                height: width * 0.78,
+                height: width * 0.72,
                 rotation: angle,
             };
         }

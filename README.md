@@ -18,7 +18,25 @@ For each try-on capable product:
 2. Pick the wear mode: `watch` or `ring`.
 3. Upload a transparent PNG somewhere public and set it as `Overlay asset URL`.
    If you leave this empty, the product cover image is used as a fallback.
-4. Fine-tune `Overlay scale`, `Horizontal offset`, and `Vertical offset`.
+4. For watches, also upload optional transparent PNGs for:
+   - `Overlay asset URL (left angle)`
+   - `Overlay asset URL (right angle)`
+   The try-on page switches between them as the wrist rotates.
+5. Fine-tune `Overlay scale`, `Horizontal offset`, and `Vertical offset`.
+
+## Asset guide
+
+To avoid the watch showing as a solid rectangle, the source image itself must be a real transparent PNG.
+
+Use these rules:
+
+- transparent background with alpha channel
+- tight crop around the watch only
+- no white or colored canvas behind the watch
+- no shadows baked into a square background
+- consistent alignment between center, left, and right angle images
+
+If the PNG already contains a white background, the plugin cannot remove that background automatically.
 
 ## Plugin config
 
