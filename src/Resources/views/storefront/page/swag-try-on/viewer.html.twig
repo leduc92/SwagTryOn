@@ -173,11 +173,6 @@
 
                         <div class="swag-try-on-controls">
                             <div class="swag-try-on-status-card mb-3">
-                                <p class="text-uppercase small mb-1 opacity-75">Virtual try-on</p>
-                                <h1 class="h4 mb-2" data-try-on-product-name-heading>{{ product.translated.name }}</h1>
-                                <p class="swag-try-on-guidance mb-3">
-                                    This page is the camera experience. On phone we try to start it automatically.
-                                </p>
                                 <p class="mb-0 small opacity-75" data-try-on-status>
                                     Preparing camera access.
                                 </p>
@@ -261,6 +256,8 @@
                             {% for relatedProduct in relatedProducts.elements %}
                                 <div class="product-slider-item">
                                     {% set relatedOverlayUrl = relatedProduct.customFields.swag_try_on_overlay_url ?? (relatedProduct.cover and relatedProduct.cover.media ? relatedProduct.cover.media.url : '') %}
+                                    {% set relatedOverlayLeftUrl = relatedProduct.customFields.swag_try_on_overlay_left_url ?? relatedOverlayUrl %}
+                                    {% set relatedOverlayRightUrl = relatedProduct.customFields.swag_try_on_overlay_right_url ?? relatedOverlayUrl %}
                                     {% set relatedWearMode = relatedProduct.customFields.swag_try_on_wear_mode ?? tryOn.wearMode %}
                                     {% set relatedScale = relatedProduct.customFields.swag_try_on_scale ?? 1 %}
                                     {% set relatedOffsetX = relatedProduct.customFields.swag_try_on_offset_x ?? 0 %}
@@ -271,7 +268,9 @@
                                             data-try-on-product-id="{{ relatedProduct.id }}"
                                             data-try-on-product-name="{{ relatedProduct.translated.name }}"
                                             data-try-on-product-mode="{{ relatedWearMode }}"
-                                            data-try-on-product-overlay="{{ relatedOverlayUrl }}"
+                                            data-try-on-product-overlay-center="{{ relatedOverlayUrl }}"
+                                            data-try-on-product-overlay-left="{{ relatedOverlayLeftUrl }}"
+                                            data-try-on-product-overlay-right="{{ relatedOverlayRightUrl }}"
                                             data-try-on-product-scale="{{ relatedScale }}"
                                             data-try-on-product-offset-x="{{ relatedOffsetX }}"
                                             data-try-on-product-offset-y="{{ relatedOffsetY }}"
@@ -319,6 +318,7 @@
     <script type="module">
         const config = {
             wearMode: {{ tryOn.wearMode|json_encode|raw }},
+            overlayImageUrls: {{ tryOn.overlayImageUrls|json_encode|raw }},
             mediapipeBundleUrl: {{ tryOn.mediapipeBundleUrl|json_encode|raw }},
             mediapipeWasmRoot: {{ tryOn.mediapipeWasmRoot|json_encode|raw }},
             mediapipeHandModelUrl: {{ tryOn.mediapipeHandModelUrl|json_encode|raw }},
@@ -352,6 +352,7 @@
             lastVideoTime: -1,
             rafId: null,
             smoothing: null,
+            activeOverlayKey: 'center',
             manual: false,
             scale: Number.isFinite(config.scale) ? config.scale : 1,
             offsetX: Number.isFinite(config.offsetX) ? config.offsetX : 0,
@@ -393,8 +394,13 @@
 
         productSwitchButtons?.forEach((button) => {
             button.addEventListener('click', () => {
-                const nextOverlayUrl = button.dataset.tryOnProductOverlay || '';
-                if (!nextOverlayUrl) {
+                const nextOverlayUrls = {
+                    center: button.dataset.tryOnProductOverlayCenter || '',
+                    left: button.dataset.tryOnProductOverlayLeft || button.dataset.tryOnProductOverlayCenter || '',
+                    right: button.dataset.tryOnProductOverlayRight || button.dataset.tryOnProductOverlayCenter || '',
+                };
+
+                if (!nextOverlayUrls.center) {
                     updateStatus('This product is missing a try-on overlay image.');
 
                     return;
@@ -408,11 +414,13 @@
                 const nextUrl = button.dataset.tryOnProductUrl || '';
 
                 config.wearMode = nextMode;
+                config.overlayImageUrls = nextOverlayUrls;
                 state.scale = Number.isFinite(nextScale) ? nextScale : 1;
                 state.offsetX = Number.isFinite(nextOffsetX) ? nextOffsetX : 0;
                 state.offsetY = Number.isFinite(nextOffsetY) ? nextOffsetY : 0;
                 state.smoothing = null;
-                overlayImage.src = nextOverlayUrl;
+                state.activeOverlayKey = 'center';
+                overlayImage.src = nextOverlayUrls.center;
 
                 if (productNameHeading) {
                     productNameHeading.textContent = nextName;
@@ -612,6 +620,7 @@
                 ? anchorForRing(landmarks)
                 : anchorForWatch(landmarks);
 
+            updateOverlayAsset(target.rotation);
             state.smoothing = smoothAnchor(target);
             updateStatus(state.manual
                 ? 'Hand detected. Manual controls are available.'
@@ -696,6 +705,28 @@
 
         function updateStatus(message) {
             status.textContent = message;
+        }
+
+        function updateOverlayAsset(rotation) {
+            if (config.wearMode !== 'watch') {
+                return;
+            }
+
+            const nextOverlayKey = rotation > 0.35
+                ? 'left'
+                : (rotation < -0.35 ? 'right' : 'center');
+
+            if (state.activeOverlayKey === nextOverlayKey) {
+                return;
+            }
+
+            const nextOverlayUrl = config.overlayImageUrls?.[nextOverlayKey] || config.overlayImageUrls?.center || '';
+            if (!nextOverlayUrl) {
+                return;
+            }
+
+            state.activeOverlayKey = nextOverlayKey;
+            overlayImage.src = nextOverlayUrl;
         }
 
         function normalizeWearMode(value) {

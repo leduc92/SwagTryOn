@@ -26,6 +26,10 @@ final class TryOnProductConfigurator
 
     private const CUSTOM_FIELD_OVERLAY_URL = 'swag_try_on_overlay_url';
 
+    private const CUSTOM_FIELD_OVERLAY_LEFT_URL = 'swag_try_on_overlay_left_url';
+
+    private const CUSTOM_FIELD_OVERLAY_RIGHT_URL = 'swag_try_on_overlay_right_url';
+
     private const CUSTOM_FIELD_SCALE = 'swag_try_on_scale';
 
     private const CUSTOM_FIELD_OFFSET_X = 'swag_try_on_offset_x';
@@ -55,6 +59,9 @@ final class TryOnProductConfigurator
             return null;
         }
 
+        $leftOverlayImageUrl = $this->readStringValue($customFields[self::CUSTOM_FIELD_OVERLAY_LEFT_URL] ?? null) ?? $overlayImageUrl;
+        $rightOverlayImageUrl = $this->readStringValue($customFields[self::CUSTOM_FIELD_OVERLAY_RIGHT_URL] ?? null) ?? $overlayImageUrl;
+
         $wearMode = $this->normalizeWearMode(
             $this->readStringValue($customFields[self::CUSTOM_FIELD_WEAR_MODE] ?? null)
                 ?? $this->readStringConfig('defaultWearMode', $salesChannelId, 'watch')
@@ -71,6 +78,11 @@ final class TryOnProductConfigurator
             'productName' => $product->getName() ?? $product->getProductNumber(),
             'wearMode' => $wearMode,
             'overlayImageUrl' => $overlayImageUrl,
+            'overlayImageUrls' => [
+                'center' => $overlayImageUrl,
+                'left' => $leftOverlayImageUrl,
+                'right' => $rightOverlayImageUrl,
+            ],
             'scale' => $this->readFloatValue($customFields[self::CUSTOM_FIELD_SCALE] ?? null, 1.0),
             'offsetX' => $this->readFloatValue($customFields[self::CUSTOM_FIELD_OFFSET_X] ?? null, 0.0),
             'offsetY' => $this->readFloatValue($customFields[self::CUSTOM_FIELD_OFFSET_Y] ?? null, 0.0),

@@ -98,6 +98,46 @@ final class Migration1743060000TryOnCustomFields extends MigrationStep
         $this->upsertCustomField(
             $connection,
             $setId,
+            'swag_try_on_overlay_left_url',
+            CustomFieldTypes::TEXT,
+            [
+                'label' => [
+                    'en-GB' => 'Overlay asset URL (left angle)',
+                    'de-DE' => 'Overlay-Asset-URL (linker Winkel)',
+                ],
+                'helpText' => [
+                    'en-GB' => 'Transparent PNG for when the wrist turns left.',
+                    'de-DE' => 'Transparentes PNG fuer eine nach links gedrehte Hand.',
+                ],
+                'componentName' => 'sw-field',
+                'customFieldType' => 'text',
+                'customFieldPosition' => 4,
+            ]
+        );
+
+        $this->upsertCustomField(
+            $connection,
+            $setId,
+            'swag_try_on_overlay_right_url',
+            CustomFieldTypes::TEXT,
+            [
+                'label' => [
+                    'en-GB' => 'Overlay asset URL (right angle)',
+                    'de-DE' => 'Overlay-Asset-URL (rechter Winkel)',
+                ],
+                'helpText' => [
+                    'en-GB' => 'Transparent PNG for when the wrist turns right.',
+                    'de-DE' => 'Transparentes PNG fuer eine nach rechts gedrehte Hand.',
+                ],
+                'componentName' => 'sw-field',
+                'customFieldType' => 'text',
+                'customFieldPosition' => 5,
+            ]
+        );
+
+        $this->upsertCustomField(
+            $connection,
+            $setId,
             'swag_try_on_scale',
             CustomFieldTypes::FLOAT,
             [
@@ -107,7 +147,7 @@ final class Migration1743060000TryOnCustomFields extends MigrationStep
                 ],
                 'componentName' => 'sw-field',
                 'customFieldType' => 'number',
-                'customFieldPosition' => 4,
+                'customFieldPosition' => 6,
             ]
         );
 
@@ -123,7 +163,7 @@ final class Migration1743060000TryOnCustomFields extends MigrationStep
                 ],
                 'componentName' => 'sw-field',
                 'customFieldType' => 'number',
-                'customFieldPosition' => 5,
+                'customFieldPosition' => 7,
             ]
         );
 
@@ -139,7 +179,7 @@ final class Migration1743060000TryOnCustomFields extends MigrationStep
                 ],
                 'componentName' => 'sw-field',
                 'customFieldType' => 'number',
-                'customFieldPosition' => 6,
+                'customFieldPosition' => 8,
             ]
         );
     }
