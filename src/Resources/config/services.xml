@@ -7,10 +7,20 @@
     <services>
         <defaults autowire="true" autoconfigure="true" public="false"/>
 
+        <service id="Shopware\Core\Content\Product\SalesChannel\Detail\AbstractProductDetailRoute"
+                 alias="Shopware\Core\Content\Product\SalesChannel\Detail\ProductDetailRoute"/>
+
         <service id="Shopware\SwagTryOn\Service\TryOnProductConfigurator"/>
 
         <service id="Shopware\SwagTryOn\Subscriber\ProductPageTryOnSubscriber">
             <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="Shopware\SwagTryOn\Storefront\Controller\TryOnController" public="true">
+            <call method="setContainer">
+                <argument type="service" id="service_container"/>
+            </call>
+            <tag name="controller.service_arguments"/>
         </service>
     </services>
 </container>
