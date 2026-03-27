@@ -1,0 +1,342 @@
+{% sw_extends '@Storefront/storefront/base.html.twig' %}
+
+{% block base_main_inner %}
+    <div class="container py-4 py-lg-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-xl-10">
+                <div class="row g-4 align-items-start">
+                    <div class="col-12 col-lg-5">
+                        <div class="sticky-lg-top" style="top: 1.5rem;">
+                            <p class="text-uppercase small text-muted mb-1">Virtual try-on</p>
+                            <h1 class="h2 mb-2">{{ product.translated.name }}</h1>
+                            <p class="text-muted mb-3">
+                                Point your camera at your hand to preview this {{ tryOn.wearMode }} live.
+                            </p>
+
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <p class="fw-semibold mb-2">Tips</p>
+                                    <ul class="mb-0 ps-3">
+                                        <li>Use bright lighting and a plain background.</li>
+                                        <li>Keep one hand fully visible in the frame.</li>
+                                        <li>Move slowly so the tracker can stay locked.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" type="button" data-try-on-start>
+                                    Start camera
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" data-try-on-toggle-manual>
+                                    Toggle manual adjustment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-7">
+                        <div class="position-relative overflow-hidden rounded-4 bg-dark shadow-lg" style="aspect-ratio: 9 / 16;">
+                            <video class="w-100 h-100 object-fit-cover" autoplay playsinline muted data-try-on-video></video>
+                            <canvas class="position-absolute top-0 start-0 w-100 h-100" data-try-on-canvas></canvas>
+                            <div class="position-absolute bottom-0 start-0 end-0 p-3 text-white bg-gradient" style="background: linear-gradient(180deg, rgba(9, 12, 20, 0) 0%, rgba(9, 12, 20, 0.82) 100%);">
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div>
+                                        <p class="mb-1 fw-semibold">Status</p>
+                                        <p class="mb-0 small opacity-75" data-try-on-status>Waiting for camera permission.</p>
+                                    </div>
+                                    <span class="badge text-bg-light text-dark">{{ tryOn.wearMode|capitalize }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 bg-light mt-3 d-none" data-try-on-manual-panel>
+                            <div class="card-body">
+                                <h2 class="h5 mb-3">Manual adjustment</h2>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label" for="swagTryOnScale">Scale</label>
+                                        <input id="swagTryOnScale" type="range" min="0.4" max="2.2" step="0.05" class="form-range" data-try-on-scale>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label" for="swagTryOnOffsetX">Offset X</label>
+                                        <input id="swagTryOnOffsetX" type="range" min="-0.3" max="0.3" step="0.01" class="form-range" data-try-on-offset-x>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label" for="swagTryOnOffsetY">Offset Y</label>
+                                        <input id="swagTryOnOffsetY" type="range" min="-0.3" max="0.3" step="0.01" class="form-range" data-try-on-offset-y>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <img src="{{ tryOn.overlayImageUrl }}" alt="" class="d-none" data-try-on-overlay-image>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const config = {
+            wearMode: {{ tryOn.wearMode|json_encode|raw }},
+            overlayImageUrl: {{ tryOn.overlayImageUrl|json_encode|raw }},
+            mediapipeBundleUrl: {{ tryOn.mediapipeBundleUrl|json_encode|raw }},
+            mediapipeWasmRoot: {{ tryOn.mediapipeWasmRoot|json_encode|raw }},
+            mediapipeHandModelUrl: {{ tryOn.mediapipeHandModelUrl|json_encode|raw }},
+            scale: Number({{ tryOn.scale|default(1)|json_encode|raw }}),
+            offsetX: Number({{ tryOn.offsetX|default(0)|json_encode|raw }}),
+            offsetY: Number({{ tryOn.offsetY|default(0)|json_encode|raw }}),
+        };
+
+        const root = document.currentScript.closest('.container') ?? document;
+        const video = document.querySelector('[data-try-on-video]');
+        const canvas = document.querySelector('[data-try-on-canvas]');
+        const overlayImage = document.querySelector('[data-try-on-overlay-image]');
+        const status = document.querySelector('[data-try-on-status]');
+        const startButton = document.querySelector('[data-try-on-start]');
+        const toggleManualButton = document.querySelector('[data-try-on-toggle-manual]');
+        const manualPanel = document.querySelector('[data-try-on-manual-panel]');
+        const scaleInput = document.querySelector('[data-try-on-scale]');
+        const offsetXInput = document.querySelector('[data-try-on-offset-x]');
+        const offsetYInput = document.querySelector('[data-try-on-offset-y]');
+
+        const state = {
+            stream: null,
+            running: false,
+            handLandmarker: null,
+            lastVideoTime: -1,
+            rafId: null,
+            smoothing: null,
+            manual: false,
+            scale: Number.isFinite(config.scale) ? config.scale : 1,
+            offsetX: Number.isFinite(config.offsetX) ? config.offsetX : 0,
+            offsetY: Number.isFinite(config.offsetY) ? config.offsetY : 0,
+        };
+
+        if (scaleInput) {
+            scaleInput.value = String(state.scale);
+            scaleInput.addEventListener('input', (event) => {
+                state.scale = Number(event.target.value);
+            });
+        }
+
+        if (offsetXInput) {
+            offsetXInput.value = String(state.offsetX);
+            offsetXInput.addEventListener('input', (event) => {
+                state.offsetX = Number(event.target.value);
+            });
+        }
+
+        if (offsetYInput) {
+            offsetYInput.value = String(state.offsetY);
+            offsetYInput.addEventListener('input', (event) => {
+                state.offsetY = Number(event.target.value);
+            });
+        }
+
+        toggleManualButton?.addEventListener('click', () => {
+            state.manual = !state.manual;
+            manualPanel?.classList.toggle('d-none', !state.manual);
+            status.textContent = state.manual
+                ? 'Manual adjustment is enabled. Use the sliders to fine-tune the overlay.'
+                : 'Manual adjustment is hidden. Hand tracking remains active.';
+        });
+
+        startButton?.addEventListener('click', async () => {
+            startButton.disabled = true;
+
+            try {
+                await startCamera();
+                await setupHandTracking();
+
+                state.running = true;
+                status.textContent = 'Camera is live. Raise your hand into view.';
+                renderLoop();
+            } catch (error) {
+                console.error(error);
+                status.textContent = 'Unable to start the camera or hand tracker on this device.';
+                startButton.disabled = false;
+            }
+        });
+
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    facingMode: 'environment',
+                },
+            });
+
+            state.stream = stream;
+            video.srcObject = stream;
+            await video.play();
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas, { passive: true });
+        }
+
+        async function setupHandTracking() {
+            if (!config.mediapipeBundleUrl || !config.mediapipeWasmRoot || !config.mediapipeHandModelUrl) {
+                status.textContent = 'MediaPipe is not configured, so only manual overlay adjustment is available.';
+
+                return;
+            }
+
+            const visionModule = await import(config.mediapipeBundleUrl);
+            const { FilesetResolver, HandLandmarker } = visionModule;
+            const vision = await FilesetResolver.forVisionTasks(config.mediapipeWasmRoot);
+
+            state.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: config.mediapipeHandModelUrl,
+                },
+                runningMode: 'VIDEO',
+                numHands: 1,
+                minHandDetectionConfidence: 0.5,
+                minHandPresenceConfidence: 0.5,
+                minTrackingConfidence: 0.5,
+            });
+        }
+
+        function resizeCanvas() {
+            canvas.width = video.clientWidth;
+            canvas.height = video.clientHeight;
+        }
+
+        function renderLoop() {
+            if (!state.running) {
+                return;
+            }
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return;
+            }
+
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            const anchor = detectAnchor();
+            if (anchor) {
+                drawOverlay(context, anchor);
+                status.textContent = state.manual
+                    ? 'Hand detected. Manual controls are available for fine tuning.'
+                    : 'Hand detected. Overlay is following your hand.';
+            } else if (state.manual) {
+                drawOverlay(context, manualAnchor());
+                status.textContent = 'No hand detected. Manual placement fallback is active.';
+            } else {
+                status.textContent = 'Looking for a hand. Keep your hand centered and well lit.';
+            }
+
+            state.rafId = window.requestAnimationFrame(renderLoop);
+        }
+
+        function detectAnchor() {
+            if (!state.handLandmarker || video.readyState < 2) {
+                return state.manual ? manualAnchor() : null;
+            }
+
+            if (video.currentTime === state.lastVideoTime) {
+                return state.smoothing ?? (state.manual ? manualAnchor() : null);
+            }
+
+            state.lastVideoTime = video.currentTime;
+            const result = state.handLandmarker.detectForVideo(video, performance.now());
+            const landmarks = result.landmarks?.[0];
+
+            if (!landmarks || landmarks.length < 21) {
+                return state.manual ? manualAnchor() : null;
+            }
+
+            const target = config.wearMode === 'ring'
+                ? anchorForRing(landmarks)
+                : anchorForWatch(landmarks);
+
+            state.smoothing = smoothAnchor(target);
+
+            return state.smoothing;
+        }
+
+        function anchorForWatch(landmarks) {
+            const wrist = landmarks[0];
+            const indexBase = landmarks[5];
+            const pinkyBase = landmarks[17];
+            const width = distance(indexBase, pinkyBase) * 1.7;
+            const angle = Math.atan2(indexBase.y - pinkyBase.y, indexBase.x - pinkyBase.x);
+
+            return {
+                x: wrist.x + state.offsetX,
+                y: wrist.y + 0.03 + state.offsetY,
+                width,
+                height: width * 0.78,
+                rotation: angle,
+            };
+        }
+
+        function anchorForRing(landmarks) {
+            const lowerKnuckle = landmarks[13];
+            const upperKnuckle = landmarks[14];
+            const width = distance(lowerKnuckle, upperKnuckle) * 1.9;
+            const angle = Math.atan2(upperKnuckle.y - lowerKnuckle.y, upperKnuckle.x - lowerKnuckle.x);
+
+            return {
+                x: (lowerKnuckle.x + upperKnuckle.x) / 2 + state.offsetX,
+                y: (lowerKnuckle.y + upperKnuckle.y) / 2 + state.offsetY,
+                width,
+                height: width * 0.78,
+                rotation: angle,
+            };
+        }
+
+        function manualAnchor() {
+            return {
+                x: 0.5 + state.offsetX,
+                y: 0.55 + state.offsetY,
+                width: 0.28,
+                height: 0.22,
+                rotation: 0,
+            };
+        }
+
+        function smoothAnchor(nextAnchor) {
+            if (!state.smoothing) {
+                return nextAnchor;
+            }
+
+            const alpha = 0.35;
+
+            return {
+                x: lerp(state.smoothing.x, nextAnchor.x, alpha),
+                y: lerp(state.smoothing.y, nextAnchor.y, alpha),
+                width: lerp(state.smoothing.width, nextAnchor.width, alpha),
+                height: lerp(state.smoothing.height, nextAnchor.height, alpha),
+                rotation: lerp(state.smoothing.rotation, nextAnchor.rotation, alpha),
+            };
+        }
+
+        function drawOverlay(context, anchor) {
+            if (!overlayImage.complete) {
+                return;
+            }
+
+            const centerX = anchor.x * canvas.width;
+            const centerY = anchor.y * canvas.height;
+            const drawWidth = anchor.width * canvas.width * state.scale;
+            const drawHeight = anchor.height * canvas.height * state.scale;
+
+            context.save();
+            context.translate(centerX, centerY);
+            context.rotate(anchor.rotation);
+            context.drawImage(overlayImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            context.restore();
+        }
+
+        function distance(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function lerp(from, to, factor) {
+            return from + ((to - from) * factor);
+        }
+    </script>
+{% endblock %}

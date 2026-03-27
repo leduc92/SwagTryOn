@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+
+    <card>
+        <title>Virtual try-on</title>
+        <title lang="de-DE">Virtuelle Anprobe</title>
+
+        <input-field type="bool">
+            <name>enabled</name>
+            <label>Enable the storefront try-on entry points</label>
+            <label lang="de-DE">Storefront-Einstiegspunkte für die Anprobe aktivieren</label>
+            <defaultValue>true</defaultValue>
+        </input-field>
+
+        <input-field type="text">
+            <name>defaultWearMode</name>
+            <label>Fallback wear mode (`watch` or `ring`)</label>
+            <label lang="de-DE">Fallback-Modus (`watch` oder `ring`)</label>
+            <defaultValue>watch</defaultValue>
+        </input-field>
+    </card>
+
+    <card>
+        <title>Hand tracking</title>
+        <title lang="de-DE">Hand-Tracking</title>
+
+        <input-field type="text">
+            <name>mediapipeBundleUrl</name>
+            <label>MediaPipe bundle URL</label>
+            <label lang="de-DE">MediaPipe-Bundle-URL</label>
+            <defaultValue>https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs</defaultValue>
+        </input-field>
+
+        <input-field type="text">
+            <name>mediapipeWasmRoot</name>
+            <label>MediaPipe WASM root</label>
+            <label lang="de-DE">MediaPipe-WASM-Root</label>
+            <defaultValue>https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm</defaultValue>
+        </input-field>
+
+        <input-field type="text">
+            <name>mediapipeHandModelUrl</name>
+            <label>Hand Landmarker model URL</label>
+            <label lang="de-DE">Hand-Landmarker-Modell-URL</label>
+            <defaultValue>https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task</defaultValue>
+        </input-field>
+    </card>
+</config>

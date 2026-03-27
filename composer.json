@@ -1,0 +1,27 @@
+{
+    "name": "swag-try-on/swag-try-on",
+    "description": "swag-try-on/swag-try-on",
+    "type": "shopware-platform-plugin",
+    "version": "1.0.0",
+    "license": "MIT",
+    "require": {
+        "shopware/core": "~6.7.0"
+    },
+    "extra": {
+        "shopware-plugin-class": "Shopware\\SwagTryOn\\SwagTryOn",
+        "label": {
+            "de-DE": "Virtuelle Anprobe",
+            "en-GB": "Virtual try-on"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Shopware\\SwagTryOn\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Shopware\\SwagTryOn\\Tests\\": "tests/"
+        }
+    }
+}
